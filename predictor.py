@@ -5,7 +5,27 @@ import pandas as pd
 import gdown
 import os
 
-# 모델 및 데이터 로딩
+# 1. 구글드라이브에서 모델/데이터 자동 다운로드
+def download_from_gdrive(file_id, output_path):
+    url = f'https://drive.google.com/uc?id={file_id}'
+    if not os.path.exists(output_path):
+        gdown.download(url, output_path, quiet=False)
+
+model_files = {
+    'model_번호1.joblib': '1d0KGuuRvDeUMfkosnUBPvxr4PQ5_VFVQ',
+    'model_번호2.joblib': '1X9X4pR1eParVIOaCYOk-gJdLASHODzRJ',
+    'model_번호3.joblib': '1phx6vgYfTjF61yZ6x23HUeA_P6cM62L2',
+    'model_번호4.joblib': '1ZOnrdEQ_QeGiaLfP1T-v8QMljcR3skx5',
+    'model_번호5.joblib': '1ZOnrdEQ_QeGiaLfP1T-v8QMljcR3skx5',
+    'model_번호6.joblib': '1_tsKo82xmrUY7KHRrYqqrKARFFc9UR0X',
+    'scaler.joblib': '1umjYN8G2wDFCRLR6c1rvKdOX0quGC2lN',
+    'lottol.xls.xlsx': '13ktLRl-NWLEwdjhi5EEf04bjMNHm9_NT'
+}
+
+for filename, file_id in model_files.items():
+    download_from_gdrive(file_id, filename)
+
+# 2. 예측기 클래스 정의
 class HybridLottoPredictor:
     def __init__(self, model_dir: str, data_file: str):
         self.model_dir = model_dir
@@ -18,9 +38,10 @@ class HybridLottoPredictor:
 
     def load_model(self):
         for i in range(1, 7):
-            model_path = os.path.join(self.model_dir, f'model_번호{i}.joblib')
+            model_path = os.path.join(self.model_dir, f'model_번호{i}.joblib') if self.model_dir else f'model_번호{i}.joblib'
             self.models[f'번호{i}'] = joblib.load(model_path)
-        self.scaler = joblib.load(os.path.join(self.model_dir, 'scaler.joblib'))
+        scaler_path = os.path.join(self.model_dir, 'scaler.joblib') if self.model_dir else 'scaler.joblib'
+        self.scaler = joblib.load(scaler_path)
 
     def load_recent_draws(self, n=30):
         df = pd.read_excel(self.data_file, skiprows=2)
@@ -81,7 +102,7 @@ class HybridLottoPredictor:
                 predictions[pos] = list(zip(top_numbers, top_probas))
         return predictions
 
-    def predict_next_numbers(self, n_predictions=5, random_ratio=0.5):
+    def predict_next_numbers(self, n_predictions=3, random_ratio=0.5):
         features = self.create_enhanced_features(self.recent_draws)
         features_scaled = self.scaler.transform(features.iloc[-1:])
         model_predictions = self.model_based_prediction(features_scaled)
@@ -109,28 +130,11 @@ class HybridLottoPredictor:
             hybrid_predictions.append(sorted(prediction_set))
         return hybrid_predictions
 
-# predictor 인스턴스 생성 (실행 경로 기준)
-predictor = HybridLottoPredictor(model_dir="./hybrid_lotto_model", data_file="./lottol.xls.xlsx")
-
-st.title("로또 번호 예측기")
+# 3. Streamlit UI
+st.title("🎲 로또 번호 예측기 (Streamlit)")
 
 if st.button("행운의 번호 생성"):
-    # 예측 코드 실행
-    # 예: predictions = predictor.predict_next_numbers(...)
-    st.write("예측 번호:", predictions)
-
-def download_from_gdrive(file_id, output_path):
-    url = f'https://drive.google.com/uc?id={file_id}'
-    if not os.path.exists(output_path):
-        gdown.download(url, output_path, quiet=False)
-
-model_files = {
-    'model_번호1.joblib': '1aBcDeFgHiJkLmNoPqRstUvWxYz',
-    'model_번호2.joblib': '파일ID2',
-    # ... 추가 ...
-    'scaler.joblib': '파일ID3',
-    'lottol.xls.xlsx': '파일ID4'
-}
-
-for filename, file_id in model_files.items():
-    download_from_gdrive(file_id, filename)
+    predictor = HybridLottoPredictor(model_dir="", data_file="lottol.xls.xlsx")
+    predictions = predictor.predict_next_numbers(n_predictions=3, random_ratio=0.5)
+    for idx, nums in enumerate(predictions, 1):
+        st.success(f"세트 {idx}: {', '.join(str(n) for n in nums)}")
