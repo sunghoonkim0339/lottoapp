@@ -1,14 +1,9 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
-import uvicorn
-import os
+import streamlit as st
+import joblib
 import numpy as np
 import pandas as pd
-import joblib
-from fastapi.responses import JSONResponse
 import gdown
-
-app = FastAPI()
+import os
 
 # 모델 및 데이터 로딩
 class HybridLottoPredictor:
@@ -117,15 +112,12 @@ class HybridLottoPredictor:
 # predictor 인스턴스 생성 (실행 경로 기준)
 predictor = HybridLottoPredictor(model_dir="./hybrid_lotto_model", data_file="./lottol.xls.xlsx")
 
-@app.get("/predict")
-@app.post("/predict")
-async def predict(request: Request = None):
-    predictions = predictor.predict_next_numbers(n_predictions=3, random_ratio=0.5)
-    return JSONResponse(content={"result": [[int(num) for num in pred] for pred in predictions]})
+st.title("로또 번호 예측기")
 
-# 로컬 테스트용
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+if st.button("행운의 번호 생성"):
+    # 예측 코드 실행
+    # 예: predictions = predictor.predict_next_numbers(...)
+    st.write("예측 번호:", predictions)
 
 def download_from_gdrive(file_id, output_path):
     url = f'https://drive.google.com/uc?id={file_id}'
